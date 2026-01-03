@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AI Joke Generator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  body.red-theme {
+    background: radial-gradient(circle at top, #3b0a0a, #05010a);
+  }
+
+  body.dark-theme {
+    background: radial-gradient(circle at top, #0f172a, #020617);
+  }
+
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Animated blobs */
+  .blob {
+    position: absolute;
+    width: 400px;
+    height: 400px;
+    filter: blur(80px);
+    animation: move 20s infinite alternate;
+    z-index: -1;
+  }
+
+  .red-theme .blob {
+    background: radial-gradient(circle, rgba(255,80,80,0.6), transparent);
+  }
+
+  .dark-theme .blob {
+    background: radial-gradient(circle, rgba(59,130,246,0.5), transparent);
+  }
+
+  .blob:nth-child(1) {
+    top: -100px;
+    left: -100px;
+  }
+
+  .blob:nth-child(2) {
+    bottom: -150px;
+    right: -100px;
+    animation-delay: 5s;
+  }
+
+  @keyframes move {
+    from { transform: translate(0,0); }
+    to { transform: translate(120px, 80px); }
+  }
+
+  /* Cursor animation */
+  .cursor {
+    display: inline-block;
+    animation: blink 1s infinite;
+    margin-left: 2px;
+  }
+
+  @keyframes blink {
+    0%, 50%, 100% { opacity: 1; }
+    25%, 75% { opacity: 0; }
+  }
+</style>
+</head>
+
+<body class="red-theme text-white min-h-screen flex flex-col relative font-[Inter]">
+
+<!-- Background Blobs -->
+<div class="blob"></div>
+<div class="blob"></div>
+
+<!-- Typing Sound -->
+<audio id="typingSound" loop>
+  <source src="https://assets.mixkit.co/sfx/preview/mixkit-keyboard-typing-1386.mp3" type="audio/mpeg">
+</audio>
+
+<!-- Navbar -->
+<nav class="px-8 py-4 flex justify-between items-center">
+  <h1 class="text-xl font-bold">🤖 JokeAI</h1>
+
+  <!-- Theme Toggle -->
+  <button
+    onclick="toggleTheme()"
+    class="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 transition">
+    🎨 Theme
+  </button>
+</nav>
+
+<!-- Main -->
+<section class="flex-1 flex flex-col items-center justify-center text-center px-4">
+
+  <h2 class="text-4xl md:text-6xl font-bold mb-4">
+    AI-Powered <span class="text-red-400">Humor</span>
+  </h2>
+
+  <p class="text-gray-400 max-w-xl mb-8">
+    Experience smart joke generation with AI-style animations,
+    voice output, and modern UI.
+  </p>
+
+  <!-- Controls -->
+  <div class="flex gap-4 flex-wrap justify-center mb-6">
+
+    <select
+      id="category"
+      class="bg-black/40 border border-white/20 rounded-xl px-4 py-2">
+      <option value="random">🎯 Random</option>
+      <option value="dad">👨 Dad Joke</option>
+    </select>
+
+    <button
+      onclick="generateJoke()"
+      class="px-6 py-3 rounded-xl bg-gradient-to-r from-red-600 to-orange-600
+             hover:scale-105 transition shadow-lg">
+      Generate Joke ⚡
+    </button>
+  </div>
+
+  <!-- Joke Card -->
+  <div class="max-w-2xl w-full bg-white/10 backdrop-blur-xl
+              border border-white/20 rounded-2xl p-6 shadow-xl
+              max-h-[280px] overflow-y-auto">
+
+    <!-- Chat Bubble -->
+    <div class="bg-black/40 rounded-xl p-4">
+
+      <p
+        id="jokeText"
+        class="text-lg text-gray-200 whitespace-pre-line
+               leading-relaxed tracking-wide break-words
+               text-center flex items-center justify-center min-h-[100px]">
+        Your AI joke will appear here ✨
+      </p>
+
+      <span id="cursor" class="cursor hidden">|</span>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex justify-between items-center mt-4">
+
+      <button
+        id="backBtn"
+        onclick="resetJoke()"
+        class="hidden px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition">
+        ⬅ Back
+      </button>
+
+      <div class="flex gap-4">
+        <button onclick="copyJoke()">📋</button>
+        <button onclick="speakJoke()">🔊</button>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<footer class="text-center py-4 text-gray-500 text-sm">
+  Built with Tailwind • AI UI Concept
+</footer>
+
+<script>
+const jokeText = document.getElementById("jokeText");
+const cursor = document.getElementById("cursor");
+const backBtn = document.getElementById("backBtn");
+const typingSound = document.getElementById("typingSound");
+
+let currentJoke = "";
+
+/* Typing Animation with Sound */
+function typeText(text) {
+  jokeText.classList.remove("text-center");
+  jokeText.textContent = "";
+  cursor.classList.remove("hidden");
+  backBtn.classList.remove("hidden");
+
+  typingSound.currentTime = 0;
+  typingSound.play();
+
+  let i = 0;
+  const interval = setInterval(() => {
+    jokeText.textContent += text[i];
+    i++;
+    if (i >= text.length) {
+      clearInterval(interval);
+      cursor.classList.add("hidden");
+      typingSound.pause();
+    }
+  }, 30);
+}
+
+async function generateJoke() {
+  jokeText.classList.add("text-center");
+  jokeText.textContent = "Thinking 🤖...";
+  cursor.classList.add("hidden");
+
+  const category = document.getElementById("category").value;
+
+  try {
+    if (category === "dad") {
+      const res = await fetch("https://icanhazdadjoke.com/", {
+        headers: { Accept: "application/json" }
+      });
+      const data = await res.json();
+      currentJoke = data.joke;
+    } else {
+      const res = await fetch("https://official-joke-api.appspot.com/random_joke");
+      const data = await res.json();
+      currentJoke = `${data.setup}\n\n${data.punchline}`;
+    }
+    typeText(currentJoke);
+  } catch {
+    typeText("AI failed to crack a joke 😶");
+  }
+}
+
+/* Back Button */
+function resetJoke() {
+  currentJoke = "";
+  jokeText.classList.add("text-center");
+  jokeText.textContent = "Your AI joke will appear here ✨";
+  backBtn.classList.add("hidden");
+}
+
+/* Copy */
+function copyJoke() {
+  if (currentJoke) {
+    navigator.clipboard.writeText(currentJoke);
+  }
+}
+
+/* Voice */
+function speakJoke() {
+  if (!currentJoke) return;
+  const speech = new SpeechSynthesisUtterance(currentJoke);
+  speechSynthesis.speak(speech);
+}
+
+/* Theme Toggle */
+function toggleTheme() {
+  document.body.classList.toggle("red-theme");
+  document.body.classList.toggle("dark-theme");
+}
+</script>
+
+</body>
+</html>
+
+
+
